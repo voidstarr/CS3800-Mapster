@@ -41,13 +41,27 @@ public class Client {
     private static void commandService(String command) {
         String[] cmd = command.split(" ");
         switch (cmd[0]) {
-            case "join" -> handleJoin();
-            case "publish" -> handlePublish();
-            case "search" -> handleSearch();
-            case "download" -> handleDownload();
-            case "leave" -> handleLeave();
-            case "quit" -> handleQuit();
-            default -> System.out.println("Invalid command.");
+            case "join":
+                handleJoin();
+                break;
+            case "publish":
+                handlePublish();
+                break;
+            case "search":
+                handleSearch();
+                break;
+            case "download":
+                handleDownload();
+                break;
+            case "leave":
+                handleLeave();
+                break;
+            case "quit":
+                handleQuit();
+                break;
+            default:
+                System.out.println("Invalid command.");
+                break;
         }
     }
 
