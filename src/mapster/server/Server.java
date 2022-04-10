@@ -4,10 +4,37 @@ import java.io.*;
 
 //create a server that listens for connections
 public class Server {
-    private Socket socket = null;
-    private ServerSocket server = null;
-    private int port = 0;
-    private DataInputStream in = null;
+    private Socket socket;
+    private ServerSocket server;
+    private int port;
+    private DataInputStream in;
+
+    private void initializeVariable(){
+        port = 0;
+    }
+    private String getCMDLineArguements(){
+        return "";
+    }
+    private void initializeSockets(){
+        try{
+            server = new ServerSocket(port);
+            socket = server.accept();
+            in = new DataInputStream(socket.getInputStream());
+        }catch(IOException e){
+            System.out.println("Error: " + e);
+        }
+    }
+    private void commandLoop(){
+        String cmd = "";
+        while(!cmd.equals("exit")){
+            try{
+                cmd = in.readUTF();
+                System.out.println(cmd);
+            }catch(IOException e){
+                System.out.println("Error: " + e);
+            }
+        }
+    }
 
     public Server(int port) {
         try{
