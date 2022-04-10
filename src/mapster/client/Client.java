@@ -1,22 +1,55 @@
 package mapster.client;
 
+import mapster.messages.JoinMessage;
+
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.net.Socket;
 import java.util.Scanner;
 
 public class Client {
 
     static boolean running = true;
+
     static Scanner keyboardInput;
 
-    public static void main(String[] args) {
+    static String serverAddress;
+    static int serverPort;
+    static int clientPort;
+
+    static ObjectOutputStream serverOutputStream;
+    static ObjectInputStream serverInputStream;
+
+    public static void main(String[] args) throws IOException {
         initializeVariables();
+        getCmdLineArguments(args);
+        //4 ListenToNetwork()
         serviceLoop();
+    }
+
+    public static void getCmdLineArguments(String[] args) {
+        if (args.length != 3) {
+            printUsage();
+            System.exit(-1);
+        }
+        serverAddress = args[0];
+        serverPort = Integer.parseInt(args[1]);
+        clientPort = Integer.parseInt(args[2]);
+    }
+
+    public static void printUsage() {
+        System.out.println("Usage: ./client <server addr> <server port> <client port>");
+        System.out.println("\t<server addr> Specify IP address or name of server to connect to.");
+        System.out.println("\t<server port> Specify port of server to connect to.");
+        System.out.println("\t<client port> Specify port that the client will listen to for file downloading.");
     }
 
     private static void initializeVariables() {
         keyboardInput = new Scanner(System.in);
     }
 
-    private static void serviceLoop() {
+    private static void serviceLoop() throws IOException {
         while (running) {
             if (keyboardInput.hasNextLine()) {
                 commandService(keyboardInput.nextLine());
@@ -38,7 +71,7 @@ public class Client {
         //Send the whole file to the peer (in multiple messages)
     }
 
-    private static void commandService(String command) {
+    private static void commandService(String command) throws IOException {
         String[] cmd = command.split(" ");
         switch (cmd[0]) {
             case "join":
@@ -88,9 +121,13 @@ public class Client {
         //Receive N pairs of IP addresses and port from server
     }
 
-    private static void handleJoin() {
+    private static void handleJoin() throws IOException {
         //Establish a TCP connection to server
+        Socket socket = new Socket(serverAddress, serverPort);
+        serverOutputStream = new ObjectOutputStream(socket.getOutputStream());
+        serverInputStream = new ObjectInputStream(socket.getInputStream());
         //Send listening port to server
+        serverOutputStream.writeObject(new JoinMessage(clientPort));
     }
 
     private static void handlePublish() {
