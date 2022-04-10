@@ -1,6 +1,8 @@
 package mapster.server;
 import java.net.*;
 import java.io.*;
+import java.util.*;
+import mapster.messages.*;
 
 //create a server that listens for connections
 public class Server {
@@ -68,7 +70,26 @@ public class Server {
             System.exit(1);
         }
     }
-    public static void main(String[] args) {
-        Server server = new Server(5000);
+    public static void main(String[] args) throws IOException, ClassNotFoundException{
+        ServerSocket ss = new ServerSocket(5050);
+        System.out.println("ServerSocket awaiting connections...");
+        Socket socket = ss.accept(); // blocking call, this will wait until a connection is attempted on this port.
+        System.out.println("Connection from " + socket + "!");
+
+        // get the input stream from the connected socket
+        InputStream inputStream = socket.getInputStream();
+        // create a DataInputStream so we can read data from it.
+        ObjectInputStream objectInputStream = new ObjectInputStream(inputStream);
+
+        // read the list of messages from the socket
+        List<JoinMessage> listOfMessages = (List<JoinMessage>) objectInputStream.readObject();
+        System.out.println("Received [" + listOfMessages.size() + "] messages from: " + socket);
+        // print out the text of every message
+        System.out.println("All messages:");
+        listOfMessages.forEach((msg)-> System.out.println(msg.getPort()));
+
+        System.out.println("Closing sockets.");
+        ss.close();
+        socket.close();
     }
 }
