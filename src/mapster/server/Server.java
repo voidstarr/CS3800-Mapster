@@ -82,13 +82,10 @@ public class Server {
         ObjectInputStream objectInputStream = new ObjectInputStream(inputStream);
 
         // read the list of messages from the socket
-        List<JoinMessage> listOfMessages = (List<JoinMessage>) objectInputStream.readObject();
-        System.out.println("Received [" + listOfMessages.size() + "] messages from: " + socket);
-        // print out the text of every message
-        System.out.println("All messages:");
-        listOfMessages.forEach((msg)-> System.out.println(msg.getPort()));
-
-        System.out.println("Closing sockets.");
+        Object message = objectInputStream.readObject();
+        System.out.println(message.toString());
+        if(message instanceof JoinMessage)
+        System.out.printf("Received JoinMessage client port: %d.", ((JoinMessage)message).getPort());
         ss.close();
         socket.close();
     }

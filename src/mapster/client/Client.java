@@ -1,11 +1,15 @@
 package mapster.client;
 
+import mapster.messages.DownloadMessage;
 import mapster.messages.JoinMessage;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.SocketChannel;
 import java.util.Scanner;
 
 public class Client {
@@ -21,11 +25,20 @@ public class Client {
     static ObjectOutputStream serverOutputStream;
     static ObjectInputStream serverInputStream;
 
-    public static void main(String[] args) throws IOException {
+    static ServerSocketChannel listeningSocketChannel;
+    static SocketChannel incomingClientConnection;
+
+    public static void main(String[] args) throws IOException, ClassNotFoundException {
         initializeVariables();
         getCmdLineArguments(args);
-        //4 ListenToNetwork()
+        listenToNetwork();
         serviceLoop();
+    }
+
+    private static void listenToNetwork() throws IOException {
+        listeningSocketChannel = ServerSocketChannel.open();
+        listeningSocketChannel.configureBlocking(false);
+        listeningSocketChannel.bind(new InetSocketAddress(clientPort));
     }
 
     public static void getCmdLineArguments(String[] args) {
@@ -49,17 +62,27 @@ public class Client {
         keyboardInput = new Scanner(System.in);
     }
 
-    private static void serviceLoop() throws IOException {
+    private static void serviceLoop() throws IOException, ClassNotFoundException {
         while (running) {
             if (keyboardInput.hasNextLine()) {
                 commandService(keyboardInput.nextLine());
             }
-            // if download request received
-            // fileService();
+            if((incomingClientConnection = listeningSocketChannel.accept()) != null) {
+                fileService();
+            }
         }
     }
 
-    private static void fileService() {
+    private static void fileService() throws IOException, ClassNotFoundException {
+        System.out.printf("Received connection from %s%n", incomingClientConnection.getRemoteAddress().toString());
+        ObjectInputStream in = new ObjectInputStream(incomingClientConnection.socket().getInputStream());
+        Object received = in.readObject();
+        if(received instanceof DownloadMessage) {
+
+        } else {
+            in.close();
+            incomingClientConnection.close();
+        }
         //if download request received
         //then Issue connection for the request
         //handleFileRequest()
@@ -121,13 +144,17 @@ public class Client {
         //Receive N pairs of IP addresses and port from server
     }
 
-    private static void handleJoin() throws IOException {
-        //Establish a TCP connection to server
-        Socket socket = new Socket(serverAddress, serverPort);
-        serverOutputStream = new ObjectOutputStream(socket.getOutputStream());
-        serverInputStream = new ObjectInputStream(socket.getInputStream());
-        //Send listening port to server
-        serverOutputStream.writeObject(new JoinMessage(clientPort));
+    private static void handleJoin() {
+        try {
+            //Establish a TCP connection to server
+            Socket socket = new Socket(serverAddress, serverPort);
+            serverOutputStream = new ObjectOutputStream(socket.getOutputStream());
+            serverInputStream = new ObjectInputStream(socket.getInputStream());
+            //Send listening port to server
+            serverOutputStream.writeObject(new JoinMessage(clientPort));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     private static void handlePublish() {
