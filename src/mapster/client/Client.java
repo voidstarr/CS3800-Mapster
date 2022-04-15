@@ -1,16 +1,13 @@
 package mapster.client;
 
-import mapster.messages.DownloadMessage;
 import mapster.messages.JoinMessage;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.SocketChannel;
 import java.util.Scanner;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class Client {
 
@@ -25,20 +22,16 @@ public class Client {
     static ObjectOutputStream serverOutputStream;
     static ObjectInputStream serverInputStream;
 
-    static ServerSocketChannel listeningSocketChannel;
-    static SocketChannel incomingClientConnection;
+    static FileService fileServiceThread;
 
-    public static void main(String[] args) throws IOException, ClassNotFoundException {
+    static ConcurrentLinkedQueue<String> messagesToFileService = new ConcurrentLinkedQueue<>();
+
+    public static void main(String[] args) throws IOException {
         initializeVariables();
         getCmdLineArguments(args);
-        listenToNetwork();
+        fileServiceThread = new FileService(clientPort, messagesToFileService);
+        fileServiceThread.start();
         serviceLoop();
-    }
-
-    private static void listenToNetwork() throws IOException {
-        listeningSocketChannel = ServerSocketChannel.open();
-        listeningSocketChannel.configureBlocking(false);
-        listeningSocketChannel.bind(new InetSocketAddress(clientPort));
     }
 
     public static void getCmdLineArguments(String[] args) {
@@ -62,39 +55,15 @@ public class Client {
         keyboardInput = new Scanner(System.in);
     }
 
-    private static void serviceLoop() throws IOException, ClassNotFoundException {
+    private static void serviceLoop() {
         while (running) {
             if (keyboardInput.hasNextLine()) {
                 commandService(keyboardInput.nextLine());
             }
-            if((incomingClientConnection = listeningSocketChannel.accept()) != null) {
-                fileService();
-            }
         }
     }
 
-    private static void fileService() throws IOException, ClassNotFoundException {
-        System.out.printf("Received connection from %s%n", incomingClientConnection.getRemoteAddress().toString());
-        ObjectInputStream in = new ObjectInputStream(incomingClientConnection.socket().getInputStream());
-        Object received = in.readObject();
-        if(received instanceof DownloadMessage) {
-
-        } else {
-            in.close();
-            incomingClientConnection.close();
-        }
-        //if download request received
-        //then Issue connection for the request
-        //handleFileRequest()
-    }
-
-    private static void handleFileRequest() {
-        //Receive the file name from the peer
-        //Send the file size to the peer
-        //Send the whole file to the peer (in multiple messages)
-    }
-
-    private static void commandService(String command) throws IOException {
+    private static void commandService(String command) {
         String[] cmd = command.split(" ");
         switch (cmd[0]) {
             case "join":
@@ -114,6 +83,9 @@ public class Client {
                 break;
             case "quit":
                 handleQuit();
+                break;
+            case "help":
+                printHelp();
                 break;
             default:
                 System.out.println("Invalid command.");
@@ -152,8 +124,10 @@ public class Client {
             serverInputStream = new ObjectInputStream(socket.getInputStream());
             //Send listening port to server
             serverOutputStream.writeObject(new JoinMessage(clientPort));
+            serverOutputStream.flush();
         } catch (IOException e) {
-            e.printStackTrace();
+//            e.printStackTrace();
+            System.out.println("Unable to connect to the server. Check Server IP and port.");
         }
     }
 

@@ -1,7 +1,7 @@
 package mapster.server;
 import java.net.*;
 import java.io.*;
-import java.util.*;
+
 import mapster.messages.*;
 
 //create a server that listens for connections
@@ -78,7 +78,11 @@ public class Server {
 
         // get the input stream from the connected socket
         InputStream inputStream = socket.getInputStream();
+        OutputStream outputStream = socket.getOutputStream();
         // create a DataInputStream so we can read data from it.
+        ObjectOutputStream objectOutputStream = new ObjectOutputStream(outputStream);
+        // https://stackoverflow.com/questions/8088557/getinputstream-blocks
+        objectOutputStream.flush(); // THIS IS IMPORTANT AFTER EVERY OPERATION WITH A ObjectOutputStream
         ObjectInputStream objectInputStream = new ObjectInputStream(inputStream);
 
         // read the list of messages from the socket
