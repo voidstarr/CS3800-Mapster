@@ -12,5 +12,12 @@ public class JoinMessage implements Serializable {
     public int getPort() {
         return port;
     }
+
+    @Override
+    public String toString() {
+        return "JoinMessage{" +
+                "port=" + port +
+                '}';
+    }
 }
 

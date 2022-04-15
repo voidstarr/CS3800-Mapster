@@ -12,4 +12,11 @@ public class DownloadMessage implements Serializable {
     public String getFileName() {
         return fileName;
     }
+
+    @Override
+    public String toString() {
+        return "DownloadMessage{" +
+                "fileName='" + fileName + '\'' +
+                '}';
+    }
 }

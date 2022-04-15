@@ -18,4 +18,12 @@ public class PublishMessage implements Serializable {
     public String getFileName() {
         return fileName;
     }
+
+    @Override
+    public String toString() {
+        return "PublishMessage{" +
+                "keyword='" + keyword + '\'' +
+                ", fileName='" + fileName + '\'' +
+                '}';
+    }
 }

@@ -2,6 +2,7 @@ package mapster.messages;
 
 import java.io.Serializable;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class ResultMessage implements Serializable {
     public static class Result {
@@ -26,11 +27,29 @@ public class ResultMessage implements Serializable {
         public String getFileName() {
             return fileName;
         }
+
+        @Override
+        public String toString() {
+            return "Result{" +
+                    "ipAddress='" + ipAddress + '\'' +
+                    ", port=" + port +
+                    ", fileName='" + fileName + '\'' +
+                    '}';
+        }
     }
 
     List<Result> results;
 
     public ResultMessage(List<Result> results) {
         this.results = results;
+    }
+
+    @Override
+    public String toString() {
+        return "ResultMessage{" +
+                "results=" + results.stream()
+                .map(String::valueOf)
+                .collect(Collectors.joining(", ", "{", "}")) +
+                '}';
     }
 }

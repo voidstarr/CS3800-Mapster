@@ -12,4 +12,11 @@ public class SearchMessage implements Serializable {
     public String getKeyword() {
         return keyword;
     }
+
+    @Override
+    public String toString() {
+        return "SearchMessage{" +
+                "keyword='" + keyword + '\'' +
+                '}';
+    }
 }
