@@ -1,10 +1,13 @@
 package mapster.server;
-import java.net.*;
-import java.io.*;
-import java.util.ArrayList;
-import java.util.HashMap;
 
 import mapster.messages.*;
+
+import java.io.*;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 //create a server that listens for connections
 public class Server {
@@ -17,33 +20,35 @@ public class Server {
     private OutputStream outputStream;
     private ObjectInputStream in;
     private ObjectOutputStream out;
+    private int clientListeningPort;
     //File processing
-    private ArrayList<Info> fileList;
-    private HashMap<String, ArrayList<Info>> map;
+    private ArrayList<ResultMessage.Result> fileList;
+    private HashMap<String, ArrayList<ResultMessage.Result>> map;
 
     //***************main methods ***************************************
     //Initialize streams that reads from the port
-    private void initializeVariable(){
-        try{
+    private void initializeVariable() {
+        try {
             inputStream = socket.getInputStream();
             outputStream = socket.getOutputStream();
-            in = new ObjectInputStream(inputStream);
             out = new ObjectOutputStream(outputStream);
-        }catch(Exception e){
+            in = new ObjectInputStream(inputStream);
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
-    private String getCMDLineArguements(){
+
+    private String getCMDLineArguments() {
         String cmdLine = "Connect to port: " + port;
         return cmdLine;
     }
-    private void initializeSockets(int port){
-        try{
+
+    private void initializeSockets(int port) {
+        try {
             this.port = port;
             server = new ServerSocket(port);
             System.out.println("Server Started");
-        }
-        catch(IOException e){
+        } catch (IOException e) {
             System.out.println("Could not listen on port: " + port);
             System.exit(1);
         }
@@ -51,118 +56,130 @@ public class Server {
     //***************main methods ***************************************
 
     //***************File methods ***************************************
-    private void readFile_and_buildMap(){
-        try{
+    private void readFile_and_buildMap() {
+        try {
             File file = new File("src/mapster/server/key.txt");
             BufferedReader br = new BufferedReader(new FileReader(file));
             String line;
-            while((line = br.readLine()) != null){
+            while ((line = br.readLine()) != null) {
                 //read info
                 String[] split = line.split(",");
                 String keyword = split[0];
                 String name = split[1];
                 String ip = split[2];
                 int port = Integer.parseInt(split[3]);
-                Info info = new Info(keyword,name, ip, port);
+                ResultMessage.Result result = new ResultMessage.Result(ip, port, name);
                 //add to file list
-                fileList.add(info);
+                fileList.add(result);
                 //add to map
-                if(map.containsKey(keyword)){
-                    map.get(keyword).add(info);
-                }
-                else{
-                    ArrayList<Info> list = new ArrayList<Info>();
-                    list.add(info);
+                if (map.containsKey(keyword)) {
+                    map.get(keyword).add(result);
+                } else {
+                    ArrayList<ResultMessage.Result> list = new ArrayList<>();
+                    list.add(result);
                     map.put(keyword, list);
                 }
             }
             br.close();
-        }
-        catch(Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
-    private void exportFile(){
-        try{
+
+    private void exportFile() {
+        try {
             File file = new File("src/mapster/server/keyword.txt");
             BufferedWriter bw = new BufferedWriter(new FileWriter(file));
-            for(Info info : fileList){
-                String line = info.getKey() + "," + info.getName() + "," + info.getIp() + "," + info.getPort();
-                bw.write(line);
-                bw.newLine();
+            HashMap<String, Integer> asdf = new HashMap<>();
+            for (Map.Entry<String, ArrayList<ResultMessage.Result>> entry : map.entrySet()) {
+                for (ResultMessage.Result info : entry.getValue()) {
+                    String line = entry.getKey() + "," + info.getFileName() + "," + info.getIpAddress() + "," + info.getPort();
+                    if (!asdf.containsKey(line)) {
+                        asdf.put(line, 1324);
+                        bw.write(line);
+                        bw.newLine();
+                    }
+                }
             }
             bw.close();
-        }
-        catch(Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
-    private ArrayList<Info> searchFilesbyKey(String key){
-        ArrayList<Info> list = map.get(key);
+
+    private ArrayList<ResultMessage.Result> searchFilesbyKey(String key) {
+        ArrayList<ResultMessage.Result> list = map.get(key);
         return list;
     }
-    private Info searchFilebyName(String name){
-        for(Info info : fileList){
-            if(info.getName().equals(name)){
-                return info;
+
+    private ResultMessage.Result searchFilebyName(String name) {
+        for (ResultMessage.Result result : fileList) {
+            if (result.getFileName().equals(name)) {
+                return result;
             }
         }
         return null;
     }
-    private void printList(ArrayList<Info> list){
-        for(Info info : list){
-            System.out.println(info.toString());
+
+    private void printList(ArrayList<ResultMessage.Result> list) {
+        for (ResultMessage.Result result : list) {
+            System.out.println(result.toString());
         }
     }
+
     //***************File methods ***************************************
-    private void commandLoop(){
-        try{
-            while(true){
-                //Accept a connection
-                socket = server.accept();
-                initializeVariable();
-                //Get the command line arguments
-                String cmdLine = getCMDLineArguements();
-                //Send the command line arguments to the client
-                out.flush();
-                out.writeObject(cmdLine);
-                out.flush();
+    private void commandLoop() {
+        try {
+            //Accept a connection
+            socket = server.accept();
+            initializeVariable();
+            //Get the command line arguments
+            String cmdLine = getCMDLineArguments();
+            while (true) {
                 //Get the response from the client
                 Object message = in.readObject();
-                System.out.println(message.toString());
-                if(message instanceof JoinMessage){
-                    JoinMessage command = (JoinMessage)message;
-                    System.out.printf("Received JoinMessage client port: %d.", ((JoinMessage)message).getPort());
-                }
-                else if(message instanceof LeaveMessage){
-                    LeaveMessage command = (LeaveMessage)message;
-                    System.out.printf("Received LeaveMessage");
+                if (message instanceof JoinMessage) {
+                    JoinMessage command = (JoinMessage) message;
+                    clientListeningPort = command.getPort();
+                    System.out.printf("Received JoinMessage client port: %d.%n", command.getPort());
+                } else if (message instanceof LeaveMessage) {
+                    LeaveMessage command = (LeaveMessage) message;
+                    System.out.printf("Received LeaveMessage %s%n", command);
                     break;
-                }
-                else if(message instanceof PublishMessage){
-                    PublishMessage command = (PublishMessage)message;
-                    System.out.printf("Received PublishMessage");
-                }
-                else if(message instanceof SearchMessage){
-                    SearchMessage command = (SearchMessage)message;
-                    System.out.printf("Received SearchMessage");
-                    ArrayList<Info> list = searchFilesbyKey(command.getKeyword());
-                    printList(list);
+                } else if (message instanceof PublishMessage) {
+                    PublishMessage command = (PublishMessage) message;
+                    System.out.printf("Received PublishMessage %s%n", command);
+                    ResultMessage.Result received = new ResultMessage.Result(socket.getRemoteSocketAddress().toString(), clientListeningPort, command.getFileName());
+                    if (map.get(command.getKeyword().toLowerCase()) != null) {
+                        map.get(command.getKeyword().toLowerCase()).add(received);
+                    } else {
+                        ArrayList<ResultMessage.Result> list = new ArrayList<>();
+                        list.add(received);
+                        map.put(command.getKeyword(), list);
+                    }
+                } else if (message instanceof SearchMessage) {
+                    SearchMessage command = (SearchMessage) message;
+                    System.out.printf("Received SearchMessage %s%n", command);
+                    ArrayList<ResultMessage.Result> list = searchFilesbyKey(command.getKeyword());
+                    out.writeObject(new ResultMessage(list));
+                } else {
+                    System.out.printf("Unable to determine type of message.%n%s", message.toString());
                 }
             }
-        }catch(Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
-    private void closeSockets(){
-        try{
+
+    private void closeSockets() {
+        try {
             in.close();
             out.close();
             socket.close();
             server.close();
             inputStream.close();
             outputStream.close();
-        }catch(IOException e){
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }
@@ -172,20 +189,23 @@ public class Server {
     public Server(int port) {
         initializeSockets(port);
         //initialize the map and list
-        fileList = new ArrayList<Info>();
-        map = new HashMap<String, ArrayList<Info>>();
+        fileList = new ArrayList<>();
+        map = new HashMap<>();
         readFile_and_buildMap();
     }
+
     //Public methods Section
-    public void startServer(){
+    public void startServer() {
         commandLoop();
     }
-    public void closeServer(){
+
+    public void closeServer() {
         closeSockets();
         exportFile();
     }
+
     //End of Public methods Section
-    public static void main(String[] args) throws IOException, ClassNotFoundException{
+    public static void main(String[] args) throws IOException, ClassNotFoundException {
         Server server = new Server(5050);
         server.startServer();
         server.closeServer();

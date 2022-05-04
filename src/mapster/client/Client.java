@@ -1,13 +1,17 @@
 package mapster.client;
 
-import mapster.messages.JoinMessage;
+import mapster.messages.*;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.Scanner;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.stream.Stream;
 
 public class Client {
 
@@ -16,6 +20,7 @@ public class Client {
     static Scanner keyboardInput;
 
     static String serverAddress;
+    static Socket serverSocket;
     static int serverPort;
     static int clientPort;
 
@@ -73,7 +78,7 @@ public class Client {
                 handlePublish();
                 break;
             case "search":
-                handleSearch();
+                handleSearch(cmd);
                 break;
             case "download":
                 handleDownload();
@@ -98,7 +103,15 @@ public class Client {
     }
 
     private static void handleLeave() {
-        // ?
+        try {
+            serverOutputStream.writeObject(new LeaveMessage());
+            serverOutputStream.flush();
+            serverOutputStream.close();
+            serverInputStream.close();
+            serverSocket.close();
+        } catch (IOException e) {
+            System.out.println("Something went wrong when trying to disconnect from the server.");
+        }
     }
 
     private static void handleDownload() {
@@ -110,7 +123,17 @@ public class Client {
         //Publish this file to the server
     }
 
-    private static void handleSearch() {
+    private static void handleSearch(String[] keywords) {
+        try {
+            serverOutputStream.writeObject(new SearchMessage(String.join(" ", Arrays.copyOfRange(keywords, 1, keywords.length))));
+            ResultMessage resultMessage = (ResultMessage) serverInputStream.readObject();
+            // TODO: still not done yet
+            for (ResultMessage.Result r : resultMessage.getResults()) {
+                System.out.println(r);
+            }
+        } catch (IOException | ClassNotFoundException e) {
+            System.out.println("Something went wrong when trying to disconnect from the server.");
+        }
         //Send keyword to server
         //Receive the number of results N from server
         //Receive N pairs of IP addresses and port from server
@@ -119,9 +142,9 @@ public class Client {
     private static void handleJoin() {
         try {
             //Establish a TCP connection to server
-            Socket socket = new Socket(serverAddress, serverPort);
-            serverOutputStream = new ObjectOutputStream(socket.getOutputStream());
-            serverInputStream = new ObjectInputStream(socket.getInputStream());
+            serverSocket = new Socket(serverAddress, serverPort);
+            serverOutputStream = new ObjectOutputStream(serverSocket.getOutputStream());
+            serverInputStream = new ObjectInputStream(serverSocket.getInputStream());
             //Send listening port to server
             serverOutputStream.writeObject(new JoinMessage(clientPort));
             serverOutputStream.flush();
@@ -132,9 +155,18 @@ public class Client {
     }
 
     private static void handlePublish() {
-        //while Not the end of keyword file
-        //Read in a keyword and file name pair
-        //Send this pair to server
+        try (Stream<String> stream = Files.lines(Paths.get("./client_shared_folder/client_keywords.txt"))) {
+            stream.forEach(str -> {
+                String[] in = str.split(","); // keyword,filename
+                try {
+                    serverOutputStream.writeObject(new PublishMessage(in[0], in[1]));
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            });
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     private static void printHelp() {

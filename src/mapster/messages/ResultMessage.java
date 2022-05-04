@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class ResultMessage implements Serializable {
-    public static class Result {
+    public static class Result implements Serializable {
         String ipAddress;
         int port;
         String fileName;
@@ -42,6 +42,10 @@ public class ResultMessage implements Serializable {
 
     public ResultMessage(List<Result> results) {
         this.results = results;
+    }
+
+    public List<Result> getResults() {
+        return results;
     }
 
     @Override
