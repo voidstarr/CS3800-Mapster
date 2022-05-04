@@ -29,18 +29,20 @@ public class FileService extends Thread {
         while (running) {
             String messageFromMainThread = messagesFromMainThread.poll();
             if (messageFromMainThread != null) {
-                running = messageFromMainThread.equals("stop");
+                running = !messageFromMainThread.equals("stop");
             }
             try {
                 if ((incomingClientConnection = listeningSocket.accept()) != null) {
                     System.out.printf("Received connection from %s%n", incomingClientConnection.getRemoteAddress().toString());
-                    ObjectInputStream in = new ObjectInputStream(incomingClientConnection.socket().getInputStream());
                     ObjectOutputStream out = new ObjectOutputStream(incomingClientConnection.socket().getOutputStream());
+                    out.flush();
+                    ObjectInputStream in = new ObjectInputStream(incomingClientConnection.socket().getInputStream());
                     Object received = in.readObject();
                     if (received instanceof DownloadMessage) {
-                        new FileRequestThread((DownloadMessage) received, in, out).start();
+                        new FileRequestThread((DownloadMessage) received, incomingClientConnection, in, out).start();
                     } else {
                         in.close();
+                        out.close();
                         incomingClientConnection.close();
                     }
                 }

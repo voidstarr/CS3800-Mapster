@@ -8,12 +8,17 @@ import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Scanner;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.stream.Stream;
 
 public class Client {
+
+    public static String sharedFolderLocation = "./client_shared_folder/";
+    public static String keywordsFile = "keywords.txt";
 
     static boolean running = true;
 
@@ -28,7 +33,7 @@ public class Client {
     static ObjectInputStream serverInputStream;
 
     static FileService fileServiceThread;
-
+    static HashMap<String, ArrayList<String>> keywordMap = new HashMap<>(); // keyword,List of filenames
     static ConcurrentLinkedQueue<String> messagesToFileService = new ConcurrentLinkedQueue<>();
 
     public static void main(String[] args) throws IOException {
@@ -36,7 +41,25 @@ public class Client {
         getCmdLineArguments(args);
         fileServiceThread = new FileService(clientPort, messagesToFileService);
         fileServiceThread.start();
+        readKeywordFile();
         serviceLoop();
+    }
+
+    private static void readKeywordFile() {
+        try (Stream<String> stream = Files.lines(Paths.get(sharedFolderLocation + keywordsFile))) {
+            stream.forEach(str -> {
+                String[] in = str.split(","); // keyword,filename
+                if (keywordMap.containsKey(in[0])) {
+                    keywordMap.get(in[0]).add(in[1]);
+                } else {
+                    ArrayList<String> list = new ArrayList<>();
+                    list.add(in[1]);
+                    keywordMap.put(in[0], list);
+                }
+            });
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public static void getCmdLineArguments(String[] args) {
@@ -47,13 +70,16 @@ public class Client {
         serverAddress = args[0];
         serverPort = Integer.parseInt(args[1]);
         clientPort = Integer.parseInt(args[2]);
+        if (args.length == 4)
+            sharedFolderLocation = args[3];
     }
 
     public static void printUsage() {
-        System.out.println("Usage: ./client <server addr> <server port> <client port>");
+        System.out.println("Usage: ./client <server addr> <server port> <client port> <shared folder>");
         System.out.println("\t<server addr> Specify IP address or name of server to connect to.");
         System.out.println("\t<server port> Specify port of server to connect to.");
         System.out.println("\t<client port> Specify port that the client will listen to for file downloading.");
+        System.out.println("\t<shared folder> Where files will be downloaded/uploaded from");
     }
 
     private static void initializeVariables() {
@@ -81,7 +107,7 @@ public class Client {
                 handleSearch(cmd);
                 break;
             case "download":
-                handleDownload();
+                handleDownload(cmd);
                 break;
             case "leave":
                 handleLeave();
@@ -114,29 +140,62 @@ public class Client {
         }
     }
 
-    private static void handleDownload() {
-        //Establish a connection to a peer
-        //Send the file name to the peer
-        //Receive the file size from the peer
-        //Receive the whole file from the peer (in multiple messages)
-        //Put the keyword and file name in keyword.txt
-        //Publish this file to the server
+    private static void handleDownload(String[] cmd) {
+        String fileName = cmd[1];
+        String ipAddress = cmd[2];
+        int port = Integer.parseInt(cmd[3]);
+        try {
+            //Establish a connection to a peer
+            Socket downloadSocket = new Socket(ipAddress, port);
+            ObjectOutputStream downloadOutStream = new ObjectOutputStream(downloadSocket.getOutputStream());
+            downloadOutStream.flush();
+            ObjectInputStream downloadInStream = new ObjectInputStream(downloadSocket.getInputStream());
+            //Send the file name to the peer
+            downloadOutStream.writeObject(new DownloadMessage(fileName));
+
+            //Receive the file from the peer
+            DownloadResponseMessage downloadResponseMessage = (DownloadResponseMessage) downloadInStream.readObject();
+
+            //Save file
+            Files.write(Paths.get(sharedFolderLocation + downloadResponseMessage.getFileName()), downloadResponseMessage.getFileContent());
+
+            //Put the keyword and file name in keyword.txt
+            if (keywordMap.containsKey("")) {
+                keywordMap.get("").add(downloadResponseMessage.getFileName());
+            } else {
+                ArrayList<String> list = new ArrayList<>();
+                list.add(downloadResponseMessage.getFileName());
+                keywordMap.put("", list);
+            }
+
+            //Publish this file to the server
+            serverOutputStream.writeObject(new PublishMessage("", downloadResponseMessage.getFileName()));
+
+            // close connection to the other client
+            downloadOutStream.close();
+            downloadInStream.close();
+            downloadSocket.close();
+            System.out.printf("Finished downloading %s from %s%n", downloadResponseMessage.getFileName(), ipAddress);
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
     }
 
     private static void handleSearch(String[] keywords) {
         try {
+            //Send keyword to server
             serverOutputStream.writeObject(new SearchMessage(String.join(" ", Arrays.copyOfRange(keywords, 1, keywords.length))));
+            //Receive results
             ResultMessage resultMessage = (ResultMessage) serverInputStream.readObject();
             // TODO: still not done yet
-            for (ResultMessage.Result r : resultMessage.getResults()) {
-                System.out.println(r);
-            }
+            //Display results
+            if (resultMessage.getResults() != null)
+                for (ResultMessage.Result r : resultMessage.getResults()) {
+                    System.out.println(r);
+                }
         } catch (IOException | ClassNotFoundException e) {
             System.out.println("Something went wrong when trying to disconnect from the server.");
         }
-        //Send keyword to server
-        //Receive the number of results N from server
-        //Receive N pairs of IP addresses and port from server
     }
 
     private static void handleJoin() {
@@ -149,15 +208,21 @@ public class Client {
             serverOutputStream.writeObject(new JoinMessage(clientPort));
             serverOutputStream.flush();
         } catch (IOException e) {
-//            e.printStackTrace();
             System.out.println("Unable to connect to the server. Check Server IP and port.");
         }
     }
 
     private static void handlePublish() {
-        try (Stream<String> stream = Files.lines(Paths.get("./client_shared_folder/client_keywords.txt"))) {
+        try (Stream<String> stream = Files.lines(Paths.get(sharedFolderLocation + keywordsFile))) {
             stream.forEach(str -> {
                 String[] in = str.split(","); // keyword,filename
+                if (keywordMap.containsKey(in[0])) {
+                    keywordMap.get(in[0]).add(in[1]);
+                } else {
+                    ArrayList<String> list = new ArrayList<>();
+                    list.add(in[1]);
+                    keywordMap.put(in[0], list);
+                }
                 try {
                     serverOutputStream.writeObject(new PublishMessage(in[0], in[1]));
                 } catch (IOException e) {
