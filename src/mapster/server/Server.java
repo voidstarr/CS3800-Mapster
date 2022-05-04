@@ -85,7 +85,7 @@ public class Server {
 
     private void exportFile() {
         try {
-            File file = new File("src/mapster/server/keyword.txt");
+            File file = new File("src/mapster/server/key.txt");
             BufferedWriter bw = new BufferedWriter(new FileWriter(file));
             HashMap<String, Integer> asdf = new HashMap<>();
             for (Map.Entry<String, ArrayList<ResultMessage.Result>> entry : map.entrySet()) {
