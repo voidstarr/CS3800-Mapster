@@ -22,7 +22,6 @@ public class Server {
     private ObjectOutputStream out;
     private int clientListeningPort;
     //File processing
-    private ArrayList<ResultMessage.Result> fileList;
     private HashMap<String, ArrayList<ResultMessage.Result>> map;
 
     //***************main methods ***************************************
@@ -69,8 +68,6 @@ public class Server {
                 String ip = split[2];
                 int port = Integer.parseInt(split[3]);
                 ResultMessage.Result result = new ResultMessage.Result(ip, port, name);
-                //add to file list
-                fileList.add(result);
                 //add to map
                 if (map.containsKey(keyword)) {
                     map.get(keyword).add(result);
@@ -113,9 +110,11 @@ public class Server {
     }
 
     private ResultMessage.Result searchFilebyName(String name) {
-        for (ResultMessage.Result result : fileList) {
-            if (result.getFileName().equals(name)) {
-                return result;
+        for (ArrayList<ResultMessage.Result> fileList : map.values()) {
+            for (ResultMessage.Result result : fileList) {
+                if (result.getFileName().equals(name)) {
+                    return result;
+                }
             }
         }
         return null;
@@ -188,8 +187,7 @@ public class Server {
     //input: port #
     public Server(int port) {
         initializeSockets(port);
-        //initialize the map and list
-        fileList = new ArrayList<>();
+        //initialize the map
         map = new HashMap<>();
         readFile_and_buildMap();
     }
