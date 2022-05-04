@@ -1,6 +1,6 @@
 package mapster.server;
 
-import mapster.messages.*;
+import mapster.messages.ResultMessage;
 
 import java.io.*;
 import java.net.ServerSocket;
@@ -8,30 +8,25 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 //create a server that listens for connections
 public class Server {
     //Standard info for server
-    private Socket socket;
+    private ArrayList<Socket> clientSockets = new ArrayList<>();
     private ServerSocket server;
     private int port;
     //Streams for reading and writing
-    private InputStream inputStream;
-    private OutputStream outputStream;
-    private ObjectInputStream in;
-    private ObjectOutputStream out;
+
     private int clientListeningPort;
     //File processing
-    private HashMap<String, ArrayList<ResultMessage.Result>> map;
+    private ConcurrentHashMap<String, ArrayList<ResultMessage.Result>> map = new ConcurrentHashMap<>();
 
     //***************main methods ***************************************
     //Initialize streams that reads from the port
     private void initializeVariable() {
         try {
-            inputStream = socket.getInputStream();
-            outputStream = socket.getOutputStream();
-            out = new ObjectOutputStream(outputStream);
-            in = new ObjectInputStream(inputStream);
+
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -104,11 +99,6 @@ public class Server {
         }
     }
 
-    private ArrayList<ResultMessage.Result> searchFilesbyKey(String key) {
-        ArrayList<ResultMessage.Result> list = map.get(key);
-        return list;
-    }
-
     private ResultMessage.Result searchFilebyName(String name) {
         for (ArrayList<ResultMessage.Result> fileList : map.values()) {
             for (ResultMessage.Result result : fileList) {
@@ -129,41 +119,12 @@ public class Server {
     //***************File methods ***************************************
     private void commandLoop() {
         try {
-            //Accept a connection
-            socket = server.accept();
-            initializeVariable();
-            //Get the command line arguments
-            String cmdLine = getCMDLineArguments();
             while (true) {
-                //Get the response from the client
-                Object message = in.readObject();
-                if (message instanceof JoinMessage) {
-                    JoinMessage command = (JoinMessage) message;
-                    clientListeningPort = command.getPort();
-                    System.out.printf("Received JoinMessage client port: %d.%n", command.getPort());
-                } else if (message instanceof LeaveMessage) {
-                    LeaveMessage command = (LeaveMessage) message;
-                    System.out.printf("Received LeaveMessage %s%n", command);
-                    break;
-                } else if (message instanceof PublishMessage) {
-                    PublishMessage command = (PublishMessage) message;
-                    System.out.printf("Received PublishMessage %s%n", command);
-                    ResultMessage.Result received = new ResultMessage.Result(socket.getRemoteSocketAddress().toString(), clientListeningPort, command.getFileName());
-                    if (map.get(command.getKeyword().toLowerCase()) != null) {
-                        map.get(command.getKeyword().toLowerCase()).add(received);
-                    } else {
-                        ArrayList<ResultMessage.Result> list = new ArrayList<>();
-                        list.add(received);
-                        map.put(command.getKeyword(), list);
-                    }
-                } else if (message instanceof SearchMessage) {
-                    SearchMessage command = (SearchMessage) message;
-                    System.out.printf("Received SearchMessage %s%n", command);
-                    ArrayList<ResultMessage.Result> list = searchFilesbyKey(command.getKeyword());
-                    out.writeObject(new ResultMessage(list));
-                } else {
-                    System.out.printf("Unable to determine type of message.%n%s", message.toString());
-                }
+                //Accept a connection
+                Socket socket = server.accept();
+                clientSockets.add(socket);
+                ClientHandlerThread clientThread = new ClientHandlerThread(socket, map);
+                clientThread.start();
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -172,12 +133,7 @@ public class Server {
 
     private void closeSockets() {
         try {
-            in.close();
-            out.close();
-            socket.close();
             server.close();
-            inputStream.close();
-            outputStream.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -186,9 +142,10 @@ public class Server {
     //constructor
     //input: port #
     public Server(int port) {
+        //Get the command line arguments
+        String cmdLine = getCMDLineArguments();
         initializeSockets(port);
         //initialize the map
-        map = new HashMap<>();
         readFile_and_buildMap();
     }
 
