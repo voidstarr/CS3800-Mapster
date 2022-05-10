@@ -1,20 +1,13 @@
 package mapster.client;
 
 import mapster.messages.DownloadMessage;
-import org.baswell.niossl.SSLServerSocketChannel;
-import org.baswell.niossl.SSLSocketChannel;
 
 import javax.net.ssl.SSLServerSocket;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.nio.channels.ServerSocketChannel;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 
 public class FileService extends Thread {
 
