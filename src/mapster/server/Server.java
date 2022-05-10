@@ -2,9 +2,11 @@ package mapster.server;
 
 import mapster.messages.ResultMessage;
 
+import javax.net.ssl.*;
 import java.io.*;
-import java.net.ServerSocket;
 import java.net.Socket;
+import java.security.*;
+import java.security.cert.CertificateException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -12,9 +14,13 @@ import java.util.concurrent.ConcurrentHashMap;
 
 //create a server that listens for connections
 public class Server {
+
+    static SSLContext sslctx = createContext();
+    static SSLServerSocketFactory sslServerSocketFactory = sslctx.getServerSocketFactory();
+
     //Standard info for server
     private ArrayList<Socket> clientSockets = new ArrayList<>();
-    private ServerSocket server;
+    private SSLServerSocket server;
     private int port;
     //Streams for reading and writing
 
@@ -40,7 +46,8 @@ public class Server {
     private void initializeSockets(int port) {
         try {
             this.port = port;
-            server = new ServerSocket(port);
+            server = (SSLServerSocket) sslServerSocketFactory.createServerSocket(port);
+            server.setUseClientMode(false);
             System.out.println("Server Started");
         } catch (IOException e) {
             System.out.println("Could not listen on port: " + port);
@@ -164,5 +171,31 @@ public class Server {
         Server server = new Server(5050);
         server.startServer();
         server.closeServer();
+    }
+
+    private static SSLContext createContext() {
+        SSLContext ssl_ctx = null;
+        try {
+            final KeyStore key_store = KeyStore.getInstance("PKCS12");
+
+            final KeyStore trust_store = KeyStore.getInstance("PKCS12");
+
+            final char[] passphrase = "password".toCharArray();
+
+            key_store.load(new FileInputStream("./keystore"), passphrase);
+            trust_store.load(new FileInputStream("./truststore"), passphrase);
+
+            KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
+            kmf.init(key_store, passphrase);
+
+            TrustManagerFactory tmf = TrustManagerFactory.getInstance("SunX509");
+            tmf.init(trust_store);
+
+            ssl_ctx = SSLContext.getInstance("TLSv1.3");
+            ssl_ctx.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
+        } catch (KeyStoreException | NoSuchAlgorithmException | UnrecoverableKeyException | CertificateException | IOException | KeyManagementException e) {
+            e.printStackTrace();
+        }
+        return ssl_ctx;
     }
 }

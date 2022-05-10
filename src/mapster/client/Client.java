@@ -2,12 +2,16 @@ package mapster.client;
 
 import mapster.messages.*;
 
+import javax.net.ssl.*;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.security.*;
+import java.security.cert.CertificateException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -24,8 +28,12 @@ public class Client {
 
     static Scanner keyboardInput;
 
+    static SSLContext sslctx = createContext();
+    static SSLSocketFactory sslSocketFactory = sslctx.getSocketFactory();
+    static SSLServerSocketFactory sslServerSocketFactory = sslctx.getServerSocketFactory();
+
     static String serverAddress;
-    static Socket serverSocket;
+    static SSLSocket serverSocket;
     static int serverPort;
     static int clientPort;
 
@@ -125,7 +133,9 @@ public class Client {
     }
 
     private static void handleQuit() {
+        messagesToFileService.add("stop");
         handleLeave();
+        System.exit(0);
     }
 
     private static void handleLeave() {
@@ -146,7 +156,10 @@ public class Client {
         int port = Integer.parseInt(cmd[3]);
         try {
             //Establish a connection to a peer
-            Socket downloadSocket = new Socket(ipAddress, port);
+
+            SSLSocket downloadSocket = (SSLSocket) sslSocketFactory.createSocket(ipAddress, port);
+            downloadSocket.setUseClientMode(true);
+
             ObjectOutputStream downloadOutStream = new ObjectOutputStream(downloadSocket.getOutputStream());
             downloadOutStream.flush();
             ObjectInputStream downloadInStream = new ObjectInputStream(downloadSocket.getInputStream());
@@ -200,8 +213,9 @@ public class Client {
 
     private static void handleJoin() {
         try {
+            serverSocket = (SSLSocket) sslSocketFactory.createSocket(serverAddress, serverPort);
+            serverSocket.setUseClientMode(true);
             //Establish a TCP connection to server
-            serverSocket = new Socket(serverAddress, serverPort);
             serverOutputStream = new ObjectOutputStream(serverSocket.getOutputStream());
             serverInputStream = new ObjectInputStream(serverSocket.getInputStream());
             //Send listening port to server
@@ -209,6 +223,7 @@ public class Client {
             serverOutputStream.flush();
         } catch (IOException e) {
             System.out.println("Unable to connect to the server. Check Server IP and port.");
+            e.printStackTrace();
         }
     }
 
@@ -243,4 +258,31 @@ public class Client {
         System.out.println("leave\tleave\task the client to disconnect from the server");
         System.out.println("quit\tquit\task the client to quit");
     }
+
+    private static SSLContext createContext() {
+        SSLContext ssl_ctx = null;
+        try {
+            final KeyStore key_store = KeyStore.getInstance("PKCS12");
+
+            final KeyStore trust_store = KeyStore.getInstance("PKCS12");
+
+            final char[] passphrase = "password".toCharArray();
+
+            key_store.load(new FileInputStream("./keystore"), passphrase);
+            trust_store.load(new FileInputStream("./truststore"), passphrase);
+
+            KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
+            kmf.init(key_store, passphrase);
+
+            TrustManagerFactory tmf = TrustManagerFactory.getInstance("SunX509");
+            tmf.init(trust_store);
+
+            ssl_ctx = SSLContext.getInstance("TLSv1.3");
+            ssl_ctx.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
+        } catch (KeyStoreException | NoSuchAlgorithmException | UnrecoverableKeyException | CertificateException | IOException | KeyManagementException e) {
+            e.printStackTrace();
+        }
+        return ssl_ctx;
+    }
+
 }

@@ -6,18 +6,19 @@ import mapster.messages.DownloadResponseMessage;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.net.Socket;
 import java.nio.channels.SocketChannel;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
 public class FileRequestThread extends Thread {
 
-    SocketChannel socket;
+    Socket socket;
     ObjectInputStream in;
     ObjectOutputStream out;
     DownloadMessage receivedMessage;
 
-    public FileRequestThread(DownloadMessage receivedMessage, SocketChannel socket, ObjectInputStream in, ObjectOutputStream out) throws IOException {
+    public FileRequestThread(DownloadMessage receivedMessage, Socket socket, ObjectInputStream in, ObjectOutputStream out) throws IOException {
         this.socket = socket;
         this.in = in;
         this.out = out;
