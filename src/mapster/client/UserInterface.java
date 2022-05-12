@@ -1,62 +1,23 @@
 package mapster.client;
 
-/**
 import javafx.application.Application;
-import javafx.stage.Stage;
-
-public class UserInterface extends Application {
-
-    public static void main(String[] args) {
-        launch(args);
-    }
-
-    @Override
-    public void start(Stage primaryStage) {
-
-    }
-}
-**/
-
-import javafx.application.Application;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.layout.VBox;
-import javafx.scene.text.Text;
 import javafx.stage.Stage;
 
 public class UserInterface extends Application
 {
-    public static void main(String[] args)
-    {
-        Application.launch(args);
+    public static void main(String[] args) {
+        Application.launch(UserInterface.class, args);
     }
 
     @Override
-    public void start(Stage stage)
-    {
-        // Create the Text
-        Text text = new Text("Hello JavaFX");
-        // Create the VBox
-        VBox root = new VBox();
-        // Add the Text to the VBox
-        root.getChildren().add(text);
-        // Set the Size of the VBox
-        root.setMinSize(350, 250);
+    public void start(Stage stage) throws Exception {
+        Parent root = FXMLLoader.load(getClass().getResource("InterfaceBuilder.fxml"));
 
-        // Create the Scene
-        Scene scene = new Scene(root);
-
-        // Set the Properties of the Stage
-        stage.setX(100);
-        stage.setY(200);
-        stage.setMinHeight(300);
-        stage.setMinWidth(400);
-
-        // Add the scene to the Stage
-        stage.setScene(scene);
-        // Set the title of the Stage
-        stage.setTitle("Your first JavaFX Example");
-        // Display the Stage
+        stage.setTitle("CS3800 Maptser");
+        stage.setScene(new Scene(root, 600, 400));
         stage.show();
     }
-
 }
