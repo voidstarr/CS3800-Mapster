@@ -1,4 +1,4 @@
-package mapster.client;
+package mapster.UserInterface;
 
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
