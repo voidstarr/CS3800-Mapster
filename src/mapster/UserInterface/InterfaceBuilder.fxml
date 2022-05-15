@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.lang.*?>
+<?import java.util.*?>
+<?import javafx.scene.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<AnchorPane prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="mapster.UserInterface.UserInterface">
+   <children>
+      <TextField layoutX="22.0" layoutY="24.0" prefHeight="31.0" prefWidth="368.0" promptText="Enter file name to search or publish" />
+      <Button layoutX="404.0" layoutY="24.0" mnemonicParsing="false" prefHeight="31.0" prefWidth="80.0" text="Search" />
+      <ListView layoutX="22.0" layoutY="70.0" prefHeight="252.0" prefWidth="556.0" />
+      <Button layoutX="221.0" layoutY="342.0" mnemonicParsing="false" text="Join" />
+      <Button layoutX="288.0" layoutY="342.0" mnemonicParsing="false" text="Disconnect" />
+      <Button layoutX="498.0" layoutY="24.0" mnemonicParsing="false" prefHeight="31.0" prefWidth="80.0" text="Publish" />
+   </children>
+</AnchorPane>
