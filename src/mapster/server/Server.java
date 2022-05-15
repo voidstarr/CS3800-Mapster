@@ -4,12 +4,12 @@ import mapster.messages.ResultMessage;
 
 import javax.net.ssl.*;
 import java.io.*;
-import java.net.Socket;
 import java.security.*;
 import java.security.cert.CertificateException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Scanner;
 import java.util.concurrent.ConcurrentHashMap;
 
 //create a server that listens for connections
@@ -19,7 +19,6 @@ public class Server {
     static SSLServerSocketFactory sslServerSocketFactory = sslctx.getServerSocketFactory();
 
     //Standard info for server
-    private ArrayList<Socket> clientSockets = new ArrayList<>();
     private SSLServerSocket server;
     private int port;
     //Streams for reading and writing
@@ -27,6 +26,8 @@ public class Server {
     private int clientListeningPort;
     //File processing
     private ConcurrentHashMap<String, ArrayList<ResultMessage.Result>> map = new ConcurrentHashMap<>();
+
+    Scanner keyboardInput;
 
     //***************main methods ***************************************
     //Initialize streams that reads from the port
@@ -125,16 +126,34 @@ public class Server {
 
     //***************File methods ***************************************
     private void commandLoop() {
-        try {
-            while (true) {
-                //Accept a connection
-                Socket socket = server.accept();
-                clientSockets.add(socket);
-                ClientHandlerThread clientThread = new ClientHandlerThread(socket, map);
-                clientThread.start();
+        while (true) {
+            if (keyboardInput.hasNextLine()) {
+                commandService(keyboardInput.nextLine());
             }
-        } catch (Exception e) {
-            e.printStackTrace();
+        }
+
+
+    }
+
+    private void commandService(String command) {
+        String[] cmd = command.split(" ");
+        switch (cmd[0]) {
+            case "print":
+                handlePrint();
+                break;
+            case "quit":
+                closeServer();
+            default:
+                System.out.println("Invalid command.");
+                break;
+        }
+    }
+
+    private void handlePrint() {
+        for (ArrayList<ResultMessage.Result> results : map.values()) {
+            for (ResultMessage.Result result : results) {
+                System.out.printf("%s\t%s:%d%n", result.getFileName(), result.getIpAddress(), result.getPort());
+            }
         }
     }
 
@@ -158,12 +177,15 @@ public class Server {
 
     //Public methods Section
     public void startServer() {
+        keyboardInput = new Scanner(System.in);
+        new ServerSocketThread(server, map).start();
         commandLoop();
     }
 
     public void closeServer() {
         closeSockets();
         exportFile();
+        System.exit(0);
     }
 
     //End of Public methods Section

@@ -7,6 +7,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class ClientHandlerThread extends Thread {
@@ -46,6 +47,10 @@ public class ClientHandlerThread extends Thread {
                     System.out.printf("Received JoinMessage client port: %d.%n", command.getPort());
                 } else if (message instanceof LeaveMessage) {
                     LeaveMessage command = (LeaveMessage) message;
+                    for (Map.Entry<String, ArrayList<ResultMessage.Result>> entry : map.entrySet()) {
+                        entry.getValue().removeIf(result -> result.getIpAddress().equals(clientSocket.getInetAddress().getHostAddress()));
+                        if (entry.getValue().size() == 0) map.remove(entry.getKey());
+                    }
                     System.out.printf("Received LeaveMessage %s%n", command);
                     break;
                 } else if (message instanceof PublishMessage) {

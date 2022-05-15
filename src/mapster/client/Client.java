@@ -70,7 +70,7 @@ public class Client {
     }
 
     public static void getCmdLineArguments(String[] args) {
-        if (args.length != 3) {
+        if (args.length != 3 && args.length != 4) {
             printUsage();
             System.exit(-1);
         }
