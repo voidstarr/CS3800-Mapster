@@ -23,8 +23,6 @@ public class Client {
     public static String sharedFolderLocation = "./client_shared_folder/";
     public static String keywordsFile = "keywords.txt";
 
-    static boolean running = true;
-
     static Scanner keyboardInput;
 
     static SSLContext sslctx = createContext();
@@ -52,6 +50,9 @@ public class Client {
         serviceLoop();
     }
 
+    /*
+    * Load keyword file from disk and store in map
+    * */
     private static void readKeywordFile() {
         try (Stream<String> stream = Files.lines(Paths.get(sharedFolderLocation + keywordsFile))) {
             stream.forEach(str -> {
@@ -69,6 +70,9 @@ public class Client {
         }
     }
 
+    /*
+    * When supplied arguments, decipher what they mean.
+    * */
     public static void getCmdLineArguments(String[] args) {
         if (args.length != 3 && args.length != 4) {
             printUsage();
@@ -81,6 +85,9 @@ public class Client {
             sharedFolderLocation = args[3];
     }
 
+    /*
+    * Don't know what to do? Ask for help.
+    * */
     public static void printUsage() {
         System.out.println("Usage: ./client <server addr> <server port> <client port> <shared folder>");
         System.out.println("\t<server addr> Specify IP address or name of server to connect to.");
@@ -93,14 +100,20 @@ public class Client {
         keyboardInput = new Scanner(System.in);
     }
 
+    /*
+    * Read user input and handle it
+    * */
     private static void serviceLoop() {
-        while (running) {
+        while (true) {
             if (keyboardInput.hasNextLine()) {
                 commandService(keyboardInput.nextLine());
             }
         }
     }
 
+    /*
+     * Decipher user input into commands
+     * */
     private static void commandService(String command) {
         String[] cmd = command.split(" ");
         switch (cmd[0]) {
@@ -131,12 +144,21 @@ public class Client {
         }
     }
 
+    /*
+    * When we quit, tell other threads to stop
+    * tell the server we're leaving
+    * and halt the process
+    * */
     private static void handleQuit() {
         messagesToFileService.add("stop");
         handleLeave();
         System.exit(0);
     }
 
+    /*
+    * Tell the server we're leaving
+    * Close open sockets and streams
+    * */
     private static void handleLeave() {
         try {
             serverOutputStream.writeObject(new LeaveMessage());
@@ -149,6 +171,9 @@ public class Client {
         }
     }
 
+    /*
+    * Download specified file from specified client
+    * */
     private static void handleDownload(String[] cmd) {
         String fileName = cmd[1];
         String ipAddress = cmd[2];
@@ -193,6 +218,9 @@ public class Client {
         }
     }
 
+    /*
+    * Send search message to server and handle response
+    * */
     private static void handleSearch(String[] keywords) {
         try {
             //Send keyword to server
@@ -210,6 +238,9 @@ public class Client {
         }
     }
 
+    /*
+    * Tell the server we've joined the network and send the port on which clients can connect to us
+    * */
     private static void handleJoin() {
         try {
             serverSocket = (SSLSocket) sslSocketFactory.createSocket(serverAddress, serverPort);
@@ -226,6 +257,9 @@ public class Client {
         }
     }
 
+    /*
+     * Push a list of local keyword:filename pairs to the server
+     */
     private static void handlePublish() {
         try (Stream<String> stream = Files.lines(Paths.get(sharedFolderLocation + keywordsFile))) {
             stream.forEach(str -> {
@@ -248,6 +282,9 @@ public class Client {
         }
     }
 
+    /*
+     * Don't know what to do? Ask for help.
+     */
     private static void printHelp() {
         System.out.println("Command\tFormat\tFunction");
         System.out.println("join\tjoin\testablish a connection with and send <client port> to the server");
@@ -258,6 +295,9 @@ public class Client {
         System.out.println("quit\tquit\task the client to quit");
     }
 
+    /*
+    * Create the SSLContext in order to create SSLSockets
+    * */
     private static SSLContext createContext() {
         SSLContext ssl_ctx = null;
         try {
