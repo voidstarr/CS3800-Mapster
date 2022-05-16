@@ -21,7 +21,7 @@ public class Server {
     //Standard info for server
     private SSLServerSocket server;
     private int port;
-    //Streams for reading and writing
+
 
     private int clientListeningPort;
     //File processing
@@ -30,20 +30,13 @@ public class Server {
     Scanner keyboardInput;
 
     //***************main methods ***************************************
-    //Initialize streams that reads from the port
-    private void initializeVariable() {
-        try {
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
 
     private String getCMDLineArguments() {
         String cmdLine = "Connect to port: " + port;
         return cmdLine;
     }
 
+    //Initialize Server Socket 
     private void initializeSockets(int port) {
         try {
             this.port = port;
@@ -58,6 +51,8 @@ public class Server {
     //***************main methods ***************************************
 
     //***************File methods ***************************************
+    
+    //Legacy feature for saving files shared on the server.
     private void readFile_and_buildMap() {
         try {
             File file = new File("src/mapster/server/key.txt");
@@ -86,6 +81,7 @@ public class Server {
         }
     }
 
+    //Save the files on the server
     private void exportFile() {
         try {
             File file = new File("src/mapster/server/key.txt");
@@ -107,6 +103,7 @@ public class Server {
         }
     }
 
+    //Additional search file by name on the server feature that is not listed in the project description
     private ResultMessage.Result searchFilebyName(String name) {
         for (ArrayList<ResultMessage.Result> fileList : map.values()) {
             for (ResultMessage.Result result : fileList) {
@@ -118,23 +115,23 @@ public class Server {
         return null;
     }
 
+    //print out the files on the server for debug purposes
     private void printList(ArrayList<ResultMessage.Result> list) {
         for (ResultMessage.Result result : list) {
             System.out.println(result.toString());
         }
     }
 
-    //***************File methods ***************************************
+    //Main method to read keyboard input and process the command
     private void commandLoop() {
         while (true) {
             if (keyboardInput.hasNextLine()) {
                 commandService(keyboardInput.nextLine());
             }
         }
-
-
     }
 
+    //enable the server to perform "print" and "quit"
     private void commandService(String command) {
         String[] cmd = command.split(" ");
         switch (cmd[0]) {
@@ -149,6 +146,7 @@ public class Server {
         }
     }
 
+    //Print out all the files on the server
     private void handlePrint() {
         for (ArrayList<ResultMessage.Result> results : map.values()) {
             for (ResultMessage.Result result : results) {
@@ -195,6 +193,7 @@ public class Server {
         server.closeServer();
     }
 
+    //SSL
     private static SSLContext createContext() {
         SSLContext ssl_ctx = null;
         try {

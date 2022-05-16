@@ -11,6 +11,7 @@ public class ServerSocketThread extends Thread {
     SSLServerSocket server;
     ConcurrentHashMap<String, ArrayList<ResultMessage.Result>> map;
 
+    //Constructor
     public ServerSocketThread(SSLServerSocket server, ConcurrentHashMap<String, ArrayList<ResultMessage.Result>> map) {
         this.server = server;
         this.map = map;

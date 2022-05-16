@@ -25,6 +25,7 @@ public class ClientHandlerThread extends Thread {
         return clientListeningPort;
     }
 
+    //Constructor
     public ClientHandlerThread(Socket clientSocket, ConcurrentHashMap<String, ArrayList<ResultMessage.Result>> map) throws IOException {
         this.map = map;
         this.clientSocket = clientSocket;
@@ -41,6 +42,7 @@ public class ClientHandlerThread extends Thread {
                 //Get the response from the client
                 Object message = in.readObject();
                 System.out.println(message);
+                //Perform different actions based on the Message type
                 if (message instanceof JoinMessage) {
                     JoinMessage command = (JoinMessage) message;
                     clientListeningPort = command.getPort();
@@ -78,6 +80,7 @@ public class ClientHandlerThread extends Thread {
         }
     }
 
+    //Search the map for the keyword
     private ArrayList<ResultMessage.Result> searchFilesByKey(String key) {
         return map.get(key);
     }
